@@ -135,7 +135,7 @@ void BasicSc2Bot::OnUnitIdle(const sc2::Unit* unit) {
 
 			sc2::Units units = observation->GetUnits(sc2::Unit::Alliance::Self, IsmyAttacker());
 
-			
+
 			if (patrolPoint) {
 				Actions()->UnitCommand(unit, sc2::ABILITY_ID::GENERAL_PATROL, *patrolPoint);
 			}
@@ -235,6 +235,9 @@ void BasicSc2Bot::OnUnitIdle(const sc2::Unit* unit) {
 	}
 }
 
+
+
+
 bool BasicSc2Bot::TryBuildSupplyDepot() {
 
 	const sc2::ObservationInterface* observation = Observation();
@@ -280,7 +283,7 @@ void BasicSc2Bot::need_reinceforcements() {
 	const sc2::ObservationInterface* observation = Observation();
 	const sc2::GameInfo& game_info = Observation()->GetGameInfo();
 
-	const sc2::Point2D enemy_base = game_info.enemy_start_locations.front();
+	const std::vector<sc2::Point2D> enemy_bases = game_info.enemy_start_locations;
 
 	int attacking_units = 0;
 
@@ -288,10 +291,14 @@ void BasicSc2Bot::need_reinceforcements() {
 	
 	//if more than 3 soldiers breach the enemy lines, time to send in the reinforcements to finish it all
 	for (const auto& unit : units) {
-
-		if ((((unit->pos.x - enemy_base.x) * (unit->pos.x - enemy_base.x)) + ((unit->pos.y - enemy_base.y) * (unit->pos.x - enemy_base.y))) <= 200.0f) {
-			attacking_units++;
+		
+		for (const auto& enemy_base : enemy_bases) {
+			if ((((unit->pos.x - enemy_base.x) * (unit->pos.x - enemy_base.x)) + ((unit->pos.y - enemy_base.y) * (unit->pos.x - enemy_base.y))) <= 200.0f) {
+				attacking_units++;
+			}
 		}
+
+
 
 	}
 
@@ -309,7 +316,19 @@ void BasicSc2Bot::need_reinceforcements() {
 
 
 	if (attacking_units > 3) {
-		Actions()->UnitCommand(units, sc2::ABILITY_ID::ATTACK_ATTACK, game_info.enemy_start_locations.front());
+		sc2::Units enemyunits = observation->GetUnits(sc2::Unit::Alliance::Enemy);
+
+		if (enemyunits.size() > 0) {
+
+
+			Actions()->UnitCommand(units, sc2::ABILITY_ID::ATTACK_ATTACK, sc2::Point2D(enemyunits.front()->pos.x, enemyunits.front()->pos.x), true);
+		}
+		else {
+			for (const auto& enemy_base : enemy_bases) {
+				Actions()->UnitCommand(units, sc2::ABILITY_ID::ATTACK_ATTACK, enemy_base, true);
+
+			}
+		}
 	}
 
 }
@@ -324,18 +343,21 @@ void BasicSc2Bot::launch_attack() {
 	
 
 	sc2::Units units = observation->GetUnits(sc2::Unit::Alliance::Self, IsmyAttacker());
-	const sc2::Point2D enemy_base = game_info.enemy_start_locations.front();
+	const std::vector<sc2::Point2D> enemy_bases = game_info.enemy_start_locations;
 
 	sc2::Units enemyunits = observation->GetUnits(sc2::Unit::Alliance::Enemy);
 
 	int attacking_units = 0;
 
+
 	//check if many units make it to the center of the base
 	//if so, most structures destroyed so time to hunt stragglers
 	for (const auto& unit : units) {
 
-		if ((((unit->pos.x - enemy_base.x) * (unit->pos.x - enemy_base.x)) + ((unit->pos.y - enemy_base.y) * (unit->pos.x - enemy_base.y))) < 100.0f) {
-			attacking_units++;
+		for (const auto& enemy_base : enemy_bases) {
+			if ((((unit->pos.x - enemy_base.x) * (unit->pos.x - enemy_base.x)) + ((unit->pos.y - enemy_base.y) * (unit->pos.x - enemy_base.y))) <= 200.0f) {
+				attacking_units++;
+			}
 		}
 
 	}
@@ -355,14 +377,29 @@ void BasicSc2Bot::launch_attack() {
 
 	//if not hunting stragglers
 	//once there is enough in the fleet, launch an attack with all units
-	if (CountUnitType(sc2::UNIT_TYPEID::TERRAN_MARINE) > 5 && CountUnitType(sc2::UNIT_TYPEID::TERRAN_THOR) >= 0 && CountUnitType(sc2::UNIT_TYPEID::TERRAN_MARAUDER) > 2 &&
-		CountUnitType(sc2::UNIT_TYPEID::TERRAN_SIEGETANK) >= 1 && CountUnitType(sc2::UNIT_TYPEID::TERRAN_HELLION) > 2 &&
-		CountUnitType(sc2::UNIT_TYPEID::TERRAN_CYCLONE) > 1) {
 		
-			Actions()->UnitCommand(units, sc2::ABILITY_ID::ATTACK_ATTACK, enemy_base);
-			
+		if (CountUnitType(sc2::UNIT_TYPEID::TERRAN_MARINE) > 5 && CountUnitType(sc2::UNIT_TYPEID::TERRAN_THOR) >= 0 && CountUnitType(sc2::UNIT_TYPEID::TERRAN_MARAUDER) > 2 &&
+			CountUnitType(sc2::UNIT_TYPEID::TERRAN_SIEGETANK) >= 1 && CountUnitType(sc2::UNIT_TYPEID::TERRAN_HELLION) > 2 &&
+			CountUnitType(sc2::UNIT_TYPEID::TERRAN_CYCLONE) > 1) {
+		
+			sc2::Units enemyunits = observation->GetUnits(sc2::Unit::Alliance::Enemy);
+
+			if (enemyunits.size() > 0) {
+
+
+				Actions()->UnitCommand(units, sc2::ABILITY_ID::ATTACK_ATTACK, sc2::Point2D(enemyunits.front()->pos.x, enemyunits.front()->pos.x), true);
+			}
+			else {
+				for (const auto& enemy_base : enemy_bases) {
+					Actions()->UnitCommand(units, sc2::ABILITY_ID::ATTACK_ATTACK, enemy_base, true);
+
+				}
+			}
 	
-	}
+		}
+
+
+		
 	
 
 
@@ -374,7 +411,7 @@ void BasicSc2Bot::finish_stragglers() {
 	const sc2::GameInfo& game_info = Observation()->GetGameInfo();
 
 	sc2::Units units = observation->GetUnits(sc2::Unit::Alliance::Self, IsmyAttacker());
-	const sc2::Point2D enemy_base = game_info.enemy_start_locations.front();
+	const std::vector<sc2::Point2D> enemy_bases = game_info.enemy_start_locations;
 	bool not_already_patrolling = true;
 
 
@@ -398,12 +435,22 @@ void BasicSc2Bot::finish_stragglers() {
 	float ry = sc2::GetRandomScalar();
 	sc2::Point2D* patrolPoint = nullptr;
 
+	sc2::Units enemyunits = observation->GetUnits(sc2::Unit::Alliance::Enemy);
 
-	patrolPoint = &(sc2::Point2D(enemy_base.x + rx * 45.0f, enemy_base.y + ry * 45.0f));
-
-	Actions()->UnitCommand(units_at_enemy, 16, patrolPoint);
+	if (enemyunits.size() > 0) {
 
 
+		Actions()->UnitCommand(units, sc2::ABILITY_ID::ATTACK_ATTACK, sc2::Point2D(enemyunits.front()->pos.x, enemyunits.front()->pos.x), true);
+	}
+	else {
+		for (const auto& enemy_base : enemy_bases) {
+			patrolPoint = &(sc2::Point2D(enemy_base.x + rx * 45.0f, enemy_base.y + ry * 45.0f));
+
+			Actions()->UnitCommand(units, sc2::ABILITY_ID::ATTACK_ATTACK, *patrolPoint, true);
+
+		}
+	}
+	
 
 }
 

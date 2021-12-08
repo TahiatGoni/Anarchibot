@@ -72,7 +72,6 @@ private:
 	bool TryUpgradeBarracks();
 	bool TryUpgradeFactory();
 
-
 	void launch_attack();
 	bool TryBuildSCV();
 	void need_reinceforcements();
@@ -80,9 +79,9 @@ private:
 
 	//for patrolling enemy base after winning to kill stragglers
 	bool patrol_enemy_flag = false;
-
 	//collected from examples in sc2api
 	
+
 	//identify units
 	struct IsVespeneGeyser {
 		bool operator()(const sc2::Unit& unit) {
